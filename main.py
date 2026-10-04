@@ -1,16 +1,18 @@
-python
 import telebot
 from telebot import types
 import sqlite3
 import os
+import threading  # НОВОЕ: для отложенных сообщений
+import time
 
-TOKEN = os.environ.get("8909829536:AAGb-ToUAwBGrL1rNwrdUHO9AE1LY_wEZdU", "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ")
+# --- НАСТРОЙКИ ---
+TOKEN = os.environ.get("TOKEN", "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ")
 PARTNER_LINK = "https://trk.ppdu.ru/click?uid=350396&oid=2304&erid=CQH36pWzJqVGXC5oLP8WVVNCNqJmbhiUPijGiu4zpwPd7G&sub1=telegram_bot"
 ADMIN_ID = 8202512654  # Твой ID цифрами
 
 bot = telebot.TeleBot(TOKEN)
 
-# --- ФУНКЦИЯ ДЛЯ БЕЗОПАСНОЙ РАБОТЫ С БАЗОЙ ---
+# --- БАЗА ДАННЫХ ---
 def db_execute(query, params=()):
     conn = sqlite3.connect('users.db', check_same_thread=False)
     cursor = conn.cursor()
@@ -18,12 +20,56 @@ def db_execute(query, params=()):
     conn.commit()
     conn.close()
 
-# Создаем таблицу при запуске
 db_execute('''CREATE TABLE IF NOT EXISTS users 
               (user_id INTEGER PRIMARY KEY, username TEXT, city TEXT)''')
 
-# Список городов
-ALLOWED_CITIES = ["москва", "санкт-петербург", "мск", "спб", "питер", "екатеринбург", "новосибирск", "казань", "нижний новгород", "челябинск", "самара", "омск", "ростов-на-дону", "уфа", "красноярск", "воронеж", "пермь", "волгоград"]
+ALLOWED_CITIES = ["москва", "санкт-петербург", "спб", "питер", "екатеринбург", "новосибирск", "казань", "мск", "краснодар", "люберцы", "орел", "псков", "оренбург", "нижний новгород", "челябинск", "самара", "омск", "ростов-на-дону", "уфа", "калининград", "астрахань", "апрелевка", "бронницы", "коломна", "дубна", "вологда", "владимир", "барнаул", "балашиха", "химки", "якутск", "ярославль", "рязань", "краснодар", "жуковский", "тверь", "тамбов", "красноярск", "сочи", "воронеж", "пермь", "саранск", "волгоград"]
+
+# --- ФУНКЦИЯ ОТЛОЖЕННОГО СООБЩЕНИЯ ---
+def send_delayed_message(chat_id, text, delay_seconds):
+    """Ждет delay_seconds секунд и отправляет сообщение"""
+    def worker():
+        time.sleep(delay_seconds)
+        try:
+            bot.send_message(chat_id, text)
+        except Exception as e:
+            print(f"Не удалось отправить отложенное сообщение: {e}")
+    
+    thread = threading.Thread(target=worker)
+    thread.daemon = True  # Поток закроется, когда закроется бот
+    thread.start()
+
+# --- СЦЕНАРИЙ НАПОМИНАНИЙ ---
+def schedule_followups(chat_id):
+    """Запускает 4 напоминания для курьера"""
+    
+    # Через 1 час
+    send_delayed_message(
+        chat_id,
+        "👋 Привет! Ты уже успел зарегистрироваться? Если что-то не получается — напиши в поддержку, поможем!",
+        60 * 60  # 3600 секунд = 1 час
+    )
+    
+    # Через 1 день
+    send_delayed_message(
+        chat_id,
+        "⏰ Напоминаю о себе! Ты уже выполнил первый заказ? Помни: чтобы получить выплату, нужно сделать 5 заказов за 20 дней. У тебя всё получится! 💪",
+        60 * 60 * 24  # 24 часа
+    )
+    
+    # Через 3 дня
+    send_delayed_message(
+        chat_id,
+        "🔥 Как успехи? Уже есть первые заказы? Если что-то пошло не так — просто напиши нам, мы на связи 24/7.",
+        60 * 60 * 24 * 3  # 3 дня
+    )
+    
+    # Через 7 дней
+    send_delayed_message(
+        chat_id,
+        "🏆 Не забывай: у тебя есть 20 дней с момента регистрации, чтобы выполнить 5 заказов. Ты уже близко к цели! Вперёд!",
+        60 * 60 * 24 * 7  # 7 дней
+    )
 
 # --- ГЛАВНОЕ МЕНЮ ---
 def get_main_menu():
@@ -37,7 +83,6 @@ def get_main_menu():
 # --- КОМАНДА /start ---
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    # Сохраняем пользователя БЕЗОПАСНО
     db_execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)", 
                (message.chat.id, message.from_user.username))
     
@@ -83,8 +128,11 @@ def check_city(message):
             "Нажми на кнопку ниже, чтобы заполнить анкету. Это займет 2 минуты:",
             reply_markup=markup
         )
-        # Сохраняем город БЕЗОПАСНО
         db_execute("UPDATE users SET city = ? WHERE user_id = ?", (city, message.chat.id))
+        
+        # НОВОЕ: Запускаем напоминания
+        schedule_followups(message.chat.id)
+        print(f"Запущены напоминания для {message.chat.id}")
         
     else:
         markup = types.InlineKeyboardMarkup()
