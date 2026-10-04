@@ -1,9 +1,10 @@
+python
 import telebot
 from telebot import types
 import sqlite3
+import os
 
-# --- НАСТРОЙКИ (ЗАМЕНИ НА СВОИ) ---
-TOKEN = "8909829536:AAGb-ToUAwBGrL1rNwrdUHO9AE1LY_wEZdU"
+TOKEN = os.environ.get("8909829536:AAGb-ToUAwBGrL1rNwrdUHO9AE1LY_wEZdU", "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ")
 PARTNER_LINK = "https://trk.ppdu.ru/click?uid=350396&oid=2304&erid=CQH36pWzJqVGXC5oLP8WVVNCNqJmbhiUPijGiu4zpwPd7G&sub1=telegram_bot"
 ADMIN_ID = 8202512654  # Твой ID цифрами
 
