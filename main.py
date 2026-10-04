@@ -1,4 +1,3 @@
-
 import telebot
 from telebot import types
 import sqlite3
@@ -7,7 +6,7 @@ import threading  # НОВОЕ: для отложенных сообщений
 import time
 
 # --- НАСТРОЙКИ ---
-TOKEN = "8909829536:AAGb-ToUAwBGrL1rNwrdUHO9AE1LY_wEZdU"
+TOKEN = os.environ.get("8909829536:AAGb-ToUAwBGrL1rNwrdUHO9AE1LY_wEZdU", "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ")
 PARTNER_LINK = "https://trk.ppdu.ru/click?uid=350396&oid=2304&erid=CQH36pWzJqVGXC5oLP8WVVNCNqJmbhiUPijGiu4zpwPd7G&sub1=telegram_bot"
 ADMIN_ID = 8202512654  # Твой ID цифрами
 
@@ -24,7 +23,7 @@ def db_execute(query, params=()):
 db_execute('''CREATE TABLE IF NOT EXISTS users 
               (user_id INTEGER PRIMARY KEY, username TEXT, city TEXT)''')
 
-ALLOWED_CITIES = ["москва", "санкт-петербург", "спб", "питер", "екатеринбург", "новосибирск", "казань", "мск", "краснодар", "люберцы", "орел", "псков", "оренбург", "нижний новгород", "челябинск", "самара", "омск", "ростов-на-дону", "уфа", "калининград", "астрахань", "апрелевка", "бронницы", "коломна", "дубна", "вологда", "владимир", "барнаул", "балашиха", "химки", "якутск", "ярославль", "рязань", "краснодар", "жуковский", "тверь", "тамбов", "красноярск", "сочи", "воронеж", "пермь", "саранск", "волгоград"]
+ALLOWED_CITIES = ["москва", "санкт-петербург", "спб", "питер", "екатеринбург", "новосибирск", "казань", "нижний новгород", "челябинск", "самара", "омск", "ростов-на-дону", "уфа", "красноярск", "воронеж", "пермь", "волгоград"]
 
 # --- ФУНКЦИЯ ОТЛОЖЕННОГО СООБЩЕНИЯ ---
 def send_delayed_message(chat_id, text, delay_seconds):
